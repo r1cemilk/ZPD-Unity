@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 // using Unity.MLAgents; 
@@ -12,6 +14,7 @@ public class PredictSteering : MonoBehaviour
 {
     [SerializeField] private NNModel kerasModel;
     [SerializeField] private TextMeshProUGUI inputValue;
+    // [SerializeField] private Texture2D processedTexture2;
 
     [SerializeField] private Camera camera1;
     [SerializeField] private Camera camera2;
@@ -26,6 +29,11 @@ public class PredictSteering : MonoBehaviour
     private string outputLayerName;
 
     private bool shouldPredict = false;
+
+    public PredictionClient client;
+
+    public float prediction;
+    private string newPred;
 
     private CarController carController;
     // private string stuff2;
@@ -44,63 +52,62 @@ public class PredictSteering : MonoBehaviour
 
     private void HandlePrediction()
     {
+        // RenderTexture.active = renderTexture1;
+        //
+        // Texture2D carCameraTexture = new Texture2D(camera1.targetTexture.width, camera1.targetTexture.height);
+        // carCameraTexture.ReadPixels(new Rect(0, 0, camera1.targetTexture.width, camera1.targetTexture.height), 0, 0);
+        // carCameraTexture.Apply();
+        //
+        // RenderTexture.active = renderTexture1;
+        
+        Texture2D screenshot = new Texture2D(renderTexture1.width, renderTexture1.height, TextureFormat.RGB24, false);
         RenderTexture.active = renderTexture1;
+        screenshot.ReadPixels(new Rect(0, 0, renderTexture1.width, renderTexture1.height), 0, 0);
+        RenderTexture.active = null;
 
-        Texture2D carCameraTexture = new Texture2D(camera1.targetTexture.width, camera1.targetTexture.height);
-        carCameraTexture.ReadPixels(new Rect(0, 0, camera1.targetTexture.width, camera1.targetTexture.height), 0, 0);
-        carCameraTexture.Apply();
-
-        RenderTexture.active = renderTexture1;
-
+        string base64Image = ConvertTextureToBase64(screenshot);
         // Resize the image to (66x200)
-        Texture2D resizedTexture = ResizeTexture(carCameraTexture, 200, 66, 125, 200);
+        // Texture2D resizedTexture = ResizeTexture(carCameraTexture, 200, 66, 125, 200);
         
-        Texture2D processedTexture = PreprocessImage(resizedTexture);
+        // Texture2D processedTexture = PreprocessImage(resizedTexture);
+        // processedTexture2 = processedTexture;
 
-        Color[] pixels = processedTexture.GetPixels();
-        float[] inputArray = new float[pixels.Length * 3];
+        // Color[] pixels = processedTexture.GetPixels();
+        // float[] inputArray = new float[pixels.Length * 3];
 
-        for (int i = 0; i < pixels.Length; i++)
+        // for (int i = 0; i < pixels.Length; i++)
+        // {
+            // inputArray[i * 3] = pixels[i].r;
+            // inputArray[i * 3 + 1] = pixels[i].g;
+            // inputArray[i * 3 + 2] = pixels[i].b;
+        // }
+        
+        
+
+        client.Predict(base64Image, output => {
+            // var outputMax = output.Max();
+            // var maxIndex = inputArray.IndexOf(output, outputMax);
+            prediction = output;
+        }, error =>
         {
-            inputArray[i * 3] = pixels[i].r;
-            inputArray[i * 3 + 1] = pixels[i].g;
-            inputArray[i * 3 + 2] = pixels[i].b;
-        }
+            print("ERROR: " + error);
+        });
         
+        carController.SetSteering(prediction);
+        // carController.SetThrottle(1000f - (carController.GetSpeed()/5f) * 1000f);
 
-        TensorShape tensorShape = new TensorShape(1, processedTexture.width, processedTexture.height, 3);
-
-        // print(tensorShape);
-
-        using Tensor inputTensor = new Tensor(tensorShape, inputArray);
-
-        // inputTensor[0] = resizedTexture;
-        worker.Execute(inputTensor);
-
-        Tensor outputTensor = worker.PeekOutput();
-        float[] outputData = outputTensor.ToReadOnlyArray();
-
-        print(outputTensor[0]*100f);
-
-        float steering_angle = outputTensor[0]*100f;
-        double throttle = 1.0 - carController.GetSpeed()/10f * 1000f;
-        carController.SetSpeed((float)throttle);
-        carController.SetSteering(steering_angle);
-
-        // outputPrediction.text = outputTensor[0].ToString();
-
-        inputTensor.Dispose();
-        outputTensor.Dispose();
+        print("PRED: " + prediction);
     }
 
     void Update()
     {   
+        carController.GetShouldPredict(shouldPredict);
         if (Input.GetKeyDown(KeyCode.B))
         {
             shouldPredict = !shouldPredict;
             if (shouldPredict)
             {
-                InvokeRepeating("HandlePrediction", 1f, 0.5f);
+                InvokeRepeating("HandlePrediction", 1f, 0.2f);
             }
             else
             {
@@ -109,6 +116,15 @@ public class PredictSteering : MonoBehaviour
                 carController.SetSteering(0);
             }
         }
+
+        // print("Stuff: " + prediction);
+    }
+    
+    private string ConvertTextureToBase64(Texture2D texture)
+    {
+        byte[] imageBytes = texture.EncodeToPNG();
+        string base64Image = Convert.ToBase64String(imageBytes);
+        return base64Image;
     }
 
     public void OnDestory()

@@ -38,7 +38,7 @@ namespace CarUI
             valueArray[1] = renderTexture2;
             valueArray[2] = renderTexture3;
 
-            csvFilename = "/big_drive/ZPD_Data/test.csv";
+            csvFilename = "/big_drive/ZPD_Data_2/test.csv";
         }
 
         // Update is called once per frame
@@ -101,7 +101,7 @@ namespace CarUI
 
                 // print(currentCameraName);
 
-                string filename = "/big_drive/ZPD_Data/Screenshots/" + currentCameraName + "_" + timestamp + ".png";
+                string filename = "/big_drive/ZPD_Data_2/Screenshots/" + currentCameraName + "_" + timestamp + ".png";
 
                 int id = Array.IndexOf(valueArray, renderTexture);
 

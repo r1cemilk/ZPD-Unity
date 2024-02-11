@@ -13,6 +13,7 @@ namespace CarControls
         private float currentSteerAngle, currentbreakForce;
         private bool isBreaking;
         private bool startPrediction;
+        private bool shouldPredict;
 
         private float AISpeed;
         private float AIThrottle;
@@ -40,6 +41,7 @@ namespace CarControls
             HandleMotor();
             HandleSteering();
             UpdateWheels();
+            // print(shouldPredict);
         }
 
         private void GetInput() {
@@ -64,6 +66,8 @@ namespace CarControls
         private void HandleMotor() {
             frontLeftWheelCollider.motorTorque = AISpeed > 0 ? AISpeed * motorForce : verticalInput * motorForce;
             frontRightWheelCollider.motorTorque =  AISpeed > 0 ? AISpeed * motorForce : verticalInput * motorForce;
+            // frontRightWheelCollider.motorTorque = 80;
+            // frontLeftWheelCollider.motorTorque = 80;
             currentbreakForce = isBreaking ? breakForce : 0f;
             ApplyBreaking();
         }
@@ -77,7 +81,10 @@ namespace CarControls
 
         private void HandleSteering() {
             // print(AISteeringAngle);
-            currentSteerAngle = AISteeringAngle > 0 ? maxSteerAngle * AISteeringAngle : maxSteerAngle * horizontalInput;
+            // currentSteerAngle = GetSteering();
+            // currentSteerAngle = AISteeringAngle;
+            // currentSteerAngle = AISteeringAngle > 0 ? AISteeringAngle : maxSteerAngle * horizontalInput;
+            currentSteerAngle = AISteeringAngle;
             frontLeftWheelCollider.steerAngle = currentSteerAngle;
             frontRightWheelCollider.steerAngle = currentSteerAngle;
         }
@@ -109,7 +116,13 @@ namespace CarControls
 
         public float GetSteering()
         {
-            return Mathf.Round(AISteeringAngle * maxSteerAngle * 100.0f) * 0.01f;
+            // if (AISteeringAngle > 0)
+            // {
+            //     return AISteeringAngle;
+            // }
+            //
+            // return horizontalInput;
+            return currentSteerAngle;
         }
 
         public float GetBrakes()
@@ -131,5 +144,11 @@ namespace CarControls
         {
             AISteeringAngle = steering_angle;
         }
+
+        public void GetShouldPredict(bool should_predict)
+        {
+            shouldPredict = should_predict;
+        }
+        
     }
 }

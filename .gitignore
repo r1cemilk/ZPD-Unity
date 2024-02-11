@@ -70,3 +70,9 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+yolov3.weights
+sign_classification.h5
+/input/ObjectDetectionData-20240210T135154Z-002
+/input/yolov3_ts_train_final.weights
+/model_objects.h5
+/model.h5
