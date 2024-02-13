@@ -11,6 +11,12 @@ public class PredictionRequest : RunAbleThread
 
     private Action<float> onOutputReceived;
     private Action<Exception> onFail;
+
+    private string port;
+    public PredictionRequest(string port)
+    {
+        this.port = port;
+    }
     
     protected override void Run()
     {
@@ -18,7 +24,7 @@ public class PredictionRequest : RunAbleThread
         using (RequestSocket client = new RequestSocket())
         {
             this.client = client;
-            client.Connect("tcp://localhost:5555");
+            client.Connect(port);
 
             while (Running)
             {
