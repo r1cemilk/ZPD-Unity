@@ -83,7 +83,22 @@ public class PredictSteering : MonoBehaviour
         carController.SetSteering(prediction);
         print("PRED: " + prediction);
     }
-
+    IEnumerator PredictSteeringAngleCoroutine()
+    {
+        while (true)
+        {
+            PredictSteeringAngle();
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+    IEnumerator PredictTrafficSignCoroutine()
+    {
+        while (true)
+        {
+            PredictTrafficSign();
+            yield return new WaitForSeconds(1.5f);
+        }
+    }
     void Update()
     {   
         carController.GetShouldPredict(shouldPredict);
@@ -92,13 +107,15 @@ public class PredictSteering : MonoBehaviour
             shouldPredict = !shouldPredict;
             if (shouldPredict)
             {
-                InvokeRepeating("PredictSteeringAngle", 1f, 0.2f);
-                InvokeRepeating("PredictTrafficSign", 1f, 1.5f);
+                StartCoroutine(PredictSteeringAngleCoroutine());
+                StartCoroutine(PredictTrafficSignCoroutine());
+                // InvokeRepeating("PredictSteeringAngle", 1f, 0.2f);
+                // InvokeRepeating("PredictTrafficSign", 1f, 1.5f);
             }
             else
             {
-                CancelInvoke("PredictSteeringAngle");
-                CancelInvoke("PredictTrafficSign");
+                // CancelInvoke("PredictSteeringAngle");
+                // CancelInvoke("PredictTrafficSign");
                 carController.SetSpeed(0);
                 carController.SetSteering(0);
             }

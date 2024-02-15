@@ -72,7 +72,7 @@ public class PredictionRequest : RunAbleThread
         }
         catch (Exception e)
         {
-            Debug.Log("Exception error in PredictionRequest.cs");
+            // Debug.Log("Exception error in PredictionRequest.cs");
 
             onFail(e);
         }
