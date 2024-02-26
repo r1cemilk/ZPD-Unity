@@ -20,7 +20,8 @@ namespace CarUI
         // Update is called once per frame
         void Update()
         {
-            text.text = car.GetSteering().ToString();
+            float roundedAngle = Mathf.Round(car.GetSteering() * 30f * 100.0f) * 0.01f;
+            text.text = roundedAngle.ToString();
         }
     }
 

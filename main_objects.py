@@ -1,5 +1,6 @@
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import struct
+import numpy as np
+import pandas as pd
 import cv2
 from PIL import Image
 from io import BytesIO
@@ -13,21 +14,19 @@ from keras.models import load_model
 model = load_model('sign_classification.h5')
 labels = pd.read_csv('./input/signnames.csv')
 
-# === CODE FOR SOCKET
-
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.bind("tcp://*:4242")
 
 # ===================
 
-# input image width and height
+
 whT = 256;
 threshold = 0.2;
 # confidence treshold
-confTreshold = 0.5;
-# Non-maximum suppression treshold (whatever that is)
-nmsTreshold = 0.3;
+confTreshold = 0.7;
+# Non-maximum suppression treshold
+nmsTreshold = 0.7;
 
 path_to_weights = './input/yolov3_ts_train_final.weights'
 path_to_cfg = './input/yolov3_ts_test.cfg'
@@ -45,27 +44,14 @@ for i in network.getUnconnectedOutLayers():
     layers_names_output.append(layers_all[i - 1])
 
 # minimum propability
-probability_minimum = 0.9
+probability_minimum = 0.8
 
 colors = np.random.randint(0, 255, size=(len(labels), 3), dtype='uint8')
 
-
-
-
-
-
-# ===== PREPOCESSING
-def grayscale(img):
-  img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-  return img
-
-def equalize(img):
-  img = cv2.equalizeHist(img)
-  return img
-
 def preprocessing(img):
-  img = grayscale(img)
-  img = equalize(img)
+  img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+  img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+  img = cv2.equalizeHist(img)
   img = img/255
   return img
 
@@ -80,12 +66,8 @@ while True:
   img = Image.open(BytesIO(image_data))
   img = np.asarray(img)
   img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-  # img = np.array([img])
-  # img = cv2.resize(img, (416, 416))
 
   t = 0
-  # h, w = img.shape[:2]
-
   h, w = img.shape[:2]
 
 
@@ -107,6 +89,8 @@ while True:
   confidences = []
   class_numbers = []
 
+  # bytes to temporarely send, in case the process fails and there are no signs
+  # (prevents the .py file from crashing)
   bytes_to_send = b'12421';
 
 
@@ -115,7 +99,6 @@ while True:
   for result in output_from_network:
       # Going through all detections from current output layer
       for detected_objects in result:
-          # TODO: Figure out what this does
           scores = detected_objects[5:]
           # Getting index of the class with the maximum value of probability
           class_current = np.argmax(scores)
@@ -158,17 +141,14 @@ while True:
               img_input = preprocessing(img_input)
               img_input = img_input.reshape(1, 32, 32, 1)
 
-              cv2.imwrite('result-sign.jpg', (img_input.squeeze() * 255).astype(np.uint8))
-
               # Predict using the model
               scores = model.predict(img_input)
               prediction = np.argmax(scores)
               class_name = labels['SignName'][prediction]
-              print("PREDICTED: ", class_name)
+              print("PREDICTED: ", prediction)
 
               # return image to unity
-              bytes_to_send = prediction.tobytes()
-
+              bytes_to_send = struct.pack('f', float(prediction))
 
               # # Draw bounding box on the original image
               cv2.rectangle(img, (x_min, y_min), (x_min + box_width, y_min + box_height), (0, 255, 0), 2)

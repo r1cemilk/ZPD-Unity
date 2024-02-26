@@ -20,7 +20,7 @@ public class PredictionRequest : RunAbleThread
     
     protected override void Run()
     {
-        ForceDotNet.Force(); // this line is needed to prevent unity freeze after one use, not sure why yet
+        ForceDotNet.Force();
         using (RequestSocket client = new RequestSocket())
         {
             this.client = client;
@@ -34,7 +34,7 @@ public class PredictionRequest : RunAbleThread
                 {
                     try
                     {
-                        gotMessage = client.TryReceiveFrameBytes(out outputBytes); // this returns true if it's successful
+                        gotMessage = client.TryReceiveFrameBytes(out outputBytes);
                         if (gotMessage) break;
                     }
                     catch (Exception e)
@@ -45,35 +45,23 @@ public class PredictionRequest : RunAbleThread
                 if (gotMessage)
                 {
                     float prediction = BitConverter.ToSingle(outputBytes, 0);
-                    // var output = new float[outputBytes.Length / 4];
-                    // Buffer.BlockCopy(outputBytes, 0, output, 0, outputBytes.Length);
-                    // onOutputReceived?.Invoke(output);
+                    Console.WriteLine("IS THIS REAL: " + prediction);
                     onOutputReceived?.Invoke(prediction);
                 }
             }
         }
 
-        NetMQConfig.Cleanup(); // this line is needed to prevent unity freeze after one use, not sure why yet
+        NetMQConfig.Cleanup();
     }
 
     public void SendInput(string input)
     {
         try
         {
-            // Debug.Log("YAYYY!");
-            // var byteArray = new byte[input.Length * 4];
-            // Buffer.BlockCopy(input, 0, byteArray, 0, byteArray.Length);
-            // Debug.Log("Size of sent array: " + byteArray.Length);
             client.SendFrame(input);
-            
-            
-            // byte[] messageBytes = Encoding.UTF8.GetBytes("GRRRRRRRRR");
-            // client.SendFrame(messageBytes);
         }
         catch (Exception e)
         {
-            // Debug.Log("Exception error in PredictionRequest.cs");
-
             onFail(e);
         }
     }

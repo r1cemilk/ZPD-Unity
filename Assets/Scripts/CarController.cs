@@ -18,22 +18,26 @@ namespace CarControls
         private float AISpeed;
         private float AIThrottle;
         private float AISteeringAngle;
+        private float currentSpeed;
+        private float TurnSteeringAngle;
+        
+        private Coroutine resetSteeringCoroutine;
 
         // Settings
         [SerializeField] private float motorForce, breakForce, maxSteerAngle;
+        [SerializeField] private Vector3 centerOfMass;
 
         // Wheel Colliders
         [SerializeField] private WheelCollider frontLeftWheelCollider, frontRightWheelCollider;
         [SerializeField] private WheelCollider rearLeftWheelCollider, rearRightWheelCollider;
         [SerializeField] private Transform com;
-        // [SerializeField] private Rigidbody rb;
 
         // Wheels
         [SerializeField] private Transform frontLeftWheelTransform, frontRightWheelTransform;
         [SerializeField] private Transform rearLeftWheelTransform, rearRightWheelTransform;
-
-
-        // var model = new OnnxModel("Assets/onnx_model_test.onnx");
+        
+        // Car
+        [SerializeField] private GameObject Car;
 
         private Rigidbody rb;
         private void FixedUpdate() {
@@ -41,7 +45,6 @@ namespace CarControls
             HandleMotor();
             HandleSteering();
             UpdateWheels();
-            // print(shouldPredict);
         }
 
         private void GetInput() {
@@ -53,21 +56,67 @@ namespace CarControls
 
             // Breaking Input
             isBreaking = Input.GetKey(KeyCode.Space);
+
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                Car.transform.position = new Vector3(-1305.5f, 156.8003f, 252.9f);
+                Car.transform.rotation = Quaternion.Euler(0f, 215.16f, 0f);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha2))
+            {
+                Car.transform.position = new Vector3(-943.8f, 156.8003f, -403.14f);
+                Car.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+            }
+            
+            // Check if the Escape key is pressed
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                // Quit the application
+                Application.Quit();
+            }
         }
 
         private void Start()
         {
             rb = GetComponent<Rigidbody>();
-            // rb.centerOfMass = com.position;
-            // Create an input tensor
-            // var inputTensor = new Tensor(model.inputs[0].shape, random: new System.Random());
+            rb.centerOfMass = centerOfMass;
         }
 
         private void HandleMotor() {
-            frontLeftWheelCollider.motorTorque = AISpeed > 0 ? AISpeed * motorForce : verticalInput * motorForce;
-            frontRightWheelCollider.motorTorque =  AISpeed > 0 ? AISpeed * motorForce : verticalInput * motorForce;
-            // frontRightWheelCollider.motorTorque = 80;
-            // frontLeftWheelCollider.motorTorque = 80;
+            // Not the best syntax, but this works too
+            if (AISpeed == 0)
+            {
+                frontLeftWheelCollider.motorTorque = verticalInput * 125 * motorForce * Time.deltaTime;
+                frontRightWheelCollider.motorTorque = verticalInput * 125 * motorForce * Time.deltaTime;
+                rearLeftWheelCollider.motorTorque = verticalInput * 125 * motorForce * Time.deltaTime;
+                rearRightWheelCollider.motorTorque = verticalInput * 125 * motorForce * Time.deltaTime;
+            }
+            else
+            {
+                if (GetSpeed() < AISpeed)
+                {
+                    frontLeftWheelCollider.motorTorque = 1 * 125 * motorForce * Time.deltaTime;
+                    frontRightWheelCollider.motorTorque = 1 * 125 * motorForce * Time.deltaTime;
+                    rearLeftWheelCollider.motorTorque = 1 * 125 * motorForce * Time.deltaTime;
+                    rearRightWheelCollider.motorTorque = 1 * 125 * motorForce * Time.deltaTime;
+                }
+                else if (GetSpeed() > AISpeed)
+                {
+                    frontLeftWheelCollider.motorTorque = -1 * 125 * motorForce * Time.deltaTime;
+                    frontRightWheelCollider.motorTorque = -1 * 125 * motorForce * Time.deltaTime;
+                    rearLeftWheelCollider.motorTorque = -1 * 125 * motorForce * Time.deltaTime;
+                    rearRightWheelCollider.motorTorque = -1 * 125 * motorForce * Time.deltaTime;
+                }
+                else
+                {
+                    frontLeftWheelCollider.motorTorque = 0 * 125 * motorForce * Time.deltaTime;
+                    frontRightWheelCollider.motorTorque = 0 * 125 * motorForce * Time.deltaTime;
+                    rearLeftWheelCollider.motorTorque = 0 * 125 * motorForce * Time.deltaTime;
+                    rearRightWheelCollider.motorTorque = 0 * 125 * motorForce * Time.deltaTime;
+                }
+            }
+ 
             currentbreakForce = isBreaking ? breakForce : 0f;
             ApplyBreaking();
         }
@@ -80,13 +129,24 @@ namespace CarControls
         }
 
         private void HandleSteering() {
-            // print(AISteeringAngle);
-            // currentSteerAngle = GetSteering();
-            // currentSteerAngle = AISteeringAngle;
-            // currentSteerAngle = AISteeringAngle > 0 ? AISteeringAngle : maxSteerAngle * horizontalInput;
-            currentSteerAngle = AISteeringAngle;
-            frontLeftWheelCollider.steerAngle = currentSteerAngle;
-            frontRightWheelCollider.steerAngle = currentSteerAngle;
+  
+            if (TurnSteeringAngle != 0)
+            {
+                currentSteerAngle = Mathf.Lerp(currentSteerAngle, TurnSteeringAngle, Time.deltaTime * 0.5f);
+            
+                if (Mathf.Abs(currentSteerAngle - TurnSteeringAngle) < 5f)
+                {
+                    TurnSteeringAngle = 0;
+                }
+            }
+            else
+            {
+                currentSteerAngle = AISteeringAngle != 0 ? AISteeringAngle * maxSteerAngle : maxSteerAngle * horizontalInput;
+            } 
+            
+            frontLeftWheelCollider.steerAngle = Mathf.Lerp(frontLeftWheelCollider.steerAngle, currentSteerAngle, 2.0f);
+            frontRightWheelCollider.steerAngle = Mathf.Lerp(frontRightWheelCollider.steerAngle, currentSteerAngle, 2.0f);
+            
         }
 
         private void UpdateWheels() {
@@ -120,10 +180,10 @@ namespace CarControls
             // {
             //     return AISteeringAngle;
             // }
-            //
-            // return horizontalInput;
-            return currentSteerAngle;
+            // return currentSteerAngle;
+            return horizontalInput;
         }
+        
 
         public float GetBrakes()
         {
@@ -143,6 +203,16 @@ namespace CarControls
         public void SetSteering(float steering_angle)
         {
             AISteeringAngle = steering_angle;
+        }
+
+        public Quaternion GetRotation()
+        {
+            return rb.rotation;
+        }
+
+        public void SetRotation(float targetRotation)
+        {
+            TurnSteeringAngle = targetRotation;
         }
 
         public void GetShouldPredict(bool should_predict)
